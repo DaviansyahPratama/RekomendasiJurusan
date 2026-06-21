@@ -1,83 +1,95 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $title ?? 'Sistem Rekomendasi Jurusan' }}</title>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700&display=swap" rel="stylesheet" />
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <title>{{ $title ?? 'Sistem Rekomendasi Mata Kuliah' }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { min-height: 100vh; background: linear-gradient(180deg, #0d6efd 0%, #6610f2 100%); }
+        .sidebar .nav-link { color: rgba(255,255,255,.85); border-radius: .5rem; margin-bottom: .25rem; }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active { background: rgba(255,255,255,.15); color: #fff; }
+        .card-stat { border: none; box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); }
+    </style>
+    @stack('styles')
 </head>
-<body class="font-sans antialiased bg-slate-50 text-slate-900">
-    <div class="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
-        <div class="flex min-h-screen">
-            <aside class="hidden md:flex w-64 flex-col border-r border-slate-200/80 bg-white/80 backdrop-blur-xl shadow-sm">
-                <div class="p-6 border-b border-slate-100">
-                    <div class="flex items-center gap-3">
-                        <div class="h-11 w-11 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold shadow-lg shadow-indigo-200">
-                            SJ
-                        </div>
-                        <div>
-                            <div class="text-sm font-bold text-slate-900">Rekomendasi Jurusan</div>
-                            <div class="text-xs text-slate-500">Relasi & Kombinatorika</div>
-                        </div>
-                    </div>
-                </div>
-
-                @php
-                    $nav = [
-                        ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => '📊'],
-                        ['route' => 'students.index', 'label' => 'Mahasiswa', 'icon' => '🎓'],
-                        ['route' => 'scores.index', 'label' => 'Nilai', 'icon' => '📝'],
-                        ['route' => 'recommendations.index', 'label' => 'Rekomendasi', 'icon' => '🏆'],
-                        ['route' => 'groups.combinations', 'label' => 'Kombinasi', 'icon' => '∑'],
-                    ];
-                @endphp
-
-                <nav class="flex-1 p-4 space-y-1">
-                    @foreach($nav as $item)
-                        @php
-                            $active = request()->routeIs($item['route'])
-                                || ($item['route'] === 'recommendations.index' && request()->routeIs('recommendation.show'));
-                        @endphp
-                        <a href="{{ route($item['route']) }}"
-                           class="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                           {{ $active ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-200' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-700' }}">
-                            <span class="text-base">{{ $item['icon'] }}</span>
-                            <span>{{ $item['label'] }}</span>
-                        </a>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        @auth
+        <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse show p-3">
+            <div class="text-white mb-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-mortarboard-fill me-2"></i>Rekomendasi MK</h5>
+                <small class="text-white-50">Mata Kuliah Mahasiswa</small>
+            </div>
+            <ul class="nav flex-column">
+                @if(auth()->user()->isAdmin())
+                    @foreach([
+                        ['route' => 'admin.dashboard', 'label' => 'Dashboard', 'icon' => 'speedometer2'],
+                        ['route' => 'admin.mata-kuliah.index', 'label' => 'Mata Kuliah', 'icon' => 'book'],
+                        ['route' => 'admin.minat.index', 'label' => 'Minat', 'icon' => 'heart'],
+                        ['route' => 'admin.prasyarat.index', 'label' => 'Prasyarat', 'icon' => 'diagram-3'],
+                        ['route' => 'admin.nilai.index', 'label' => 'Nilai Mahasiswa', 'icon' => 'clipboard-data'],
+                        ['route' => 'admin.mahasiswa.index', 'label' => 'Data Mahasiswa', 'icon' => 'people'],
+                    ] as $item)
+                        <li class="nav-item">
+                            <a href="{{ route($item['route']) }}" class="nav-link {{ request()->routeIs(str_replace('.index', '.*', $item['route'])) || request()->routeIs($item['route']) ? 'active' : '' }}">
+                                <i class="bi bi-{{ $item['icon'] }} me-2"></i>{{ $item['label'] }}
+                            </a>
+                        </li>
                     @endforeach
-                </nav>
+                @else
+                    @foreach([
+                        ['route' => 'mahasiswa.dashboard', 'label' => 'Dashboard', 'icon' => 'speedometer2'],
+                        ['route' => 'mahasiswa.profil', 'label' => 'Profil', 'icon' => 'person'],
+                        ['route' => 'mahasiswa.riwayat-nilai', 'label' => 'Riwayat Nilai', 'icon' => 'journal-text'],
+                        ['route' => 'mahasiswa.pilih-minat', 'label' => 'Pilih Minat', 'icon' => 'heart'],
+                        ['route' => 'mahasiswa.rekomendasi', 'label' => 'Rekomendasi', 'icon' => 'stars'],
+                        ['route' => 'mahasiswa.simulasi', 'label' => 'Simulasi MK', 'icon' => 'calculator'],
+                        ['route' => 'mahasiswa.grafik', 'label' => 'Grafik', 'icon' => 'bar-chart'],
+                    ] as $item)
+                        <li class="nav-item">
+                            <a href="{{ route($item['route']) }}" class="nav-link {{ request()->routeIs($item['route']) ? 'active' : '' }}">
+                                <i class="bi bi-{{ $item['icon'] }} me-2"></i>{{ $item['label'] }}
+                            </a>
+                        </li>
+                    @endforeach
+                @endif
+            </ul>
+            <div class="mt-4 pt-3 border-top border-white border-opacity-25">
+                <div class="text-white-50 small mb-2">{{ auth()->user()->name }}</div>
+                <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-light btn-sm w-100"><i class="bi bi-box-arrow-right me-1"></i>Logout</button>
+                </form>
+            </div>
+        </nav>
+        @endauth
 
-                <div class="p-4 m-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-xs">
-                    <div class="font-semibold">Laravel 11</div>
-                    <div class="mt-1 text-white/80">Scoring · Decision Tree · Kombinatorika</div>
+        <main class="@auth col-md-9 ms-sm-auto col-lg-10 @else col-12 @endauth px-md-4 py-4">
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
-            </aside>
-
-            <main class="flex-1 min-w-0">
-                <header class="md:hidden sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-slate-200 px-4 py-3">
-                    <div class="flex items-center justify-between">
-                        <div class="font-bold text-sm">Rekomendasi Jurusan</div>
-                        <a href="{{ route('students.create') }}" class="text-xs font-semibold px-3 py-2 rounded-lg bg-indigo-600 text-white">+ Mahasiswa</a>
-                    </div>
-                    <div class="mt-2 flex gap-2 overflow-x-auto pb-1">
-                        @foreach($nav as $item)
-                            <a href="{{ route($item['route']) }}" class="shrink-0 text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white">{{ $item['label'] }}</a>
+            @endif
+            @if($errors->any())
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
                         @endforeach
-                    </div>
-                </header>
-
-                <div class="px-4 md:px-8 py-8">
-                    @if(session('success'))
-                        <div class="mb-6 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 text-sm">
-                            {{ session('success') }}
-                        </div>
-                    @endif
-                    @yield('content')
+                    </ul>
                 </div>
-            </main>
-        </div>
+            @endif
+            @yield('content')
+        </main>
     </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+@stack('scripts')
 </body>
 </html>
