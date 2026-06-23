@@ -52,7 +52,7 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($mataKuliahData as $data) {
-            MataKuliah::create([...$data, 'deskripsi' => 'Mata kuliah '.$data['nama_mk']]);
+            MataKuliah::create([...$data, 'deskripsi' => 'Mata kuliah ' . $data['nama_mk']]);
         }
 
         $prasyaratMap = [
@@ -78,15 +78,44 @@ class DatabaseSeeder extends Seeder
         }
 
         $mahasiswaData = [
-            ['name' => 'Aulia Rahma', 'email' => 'aulia@demo.test', 'nim' => '2201001', 'semester_aktif' => 4, 'ipk' => 3.45, 'minat' => ['Pemrograman', 'Multimedia']],
-            ['name' => 'Bima Santoso', 'email' => 'bima@demo.test', 'nim' => '2201002', 'semester_aktif' => 4, 'ipk' => 3.12, 'minat' => ['Data Science']],
-            ['name' => 'Citra Dewi', 'email' => 'citra@demo.test', 'nim' => '2201003', 'semester_aktif' => 5, 'ipk' => 3.67, 'minat' => ['Artificial Intelligence', 'Data Science']],
+            [
+                'name' => 'Aulia Rahma',
+                'email' => 'aulia@demo.test',
+                'nim' => '2201001',
+                'semester_aktif' => 7,
+                'ipk' => 3.45,
+                'minat' => ['Rekayasa Perangkat Lunak'],
+            ],
+            [
+                'name' => 'Bima Santoso',
+                'email' => 'bima@demo.test',
+                'nim' => '2201002',
+                'semester_aktif' => 7,
+                'ipk' => 3.12,
+                'minat' => ['Kecerdasan Buatan dan Data'],
+            ],
+            [
+                'name' => 'Citra Dewi',
+                'email' => 'citra@demo.test',
+                'nim' => '2201003',
+                'semester_aktif' => 7,
+                'ipk' => 3.67,
+                'minat' => [
+                    'Jaringan dan Keamanan Siber',
+                    'Kecerdasan Buatan dan Data',
+                ],
+            ],
         ];
 
         $service = app(RekomendasiMataKuliahService::class);
 
         foreach ($mahasiswaData as $data) {
-            $minatIds = Minat::whereIn('nama_minat', $data['minat'])->pluck('id');
+
+            $minatIds = Minat::whereIn(
+                'nama_minat',
+                $data['minat']
+            )->pluck('id');
+
             unset($data['minat']);
 
             $user = User::create([
@@ -100,34 +129,49 @@ class DatabaseSeeder extends Seeder
             $nilaiRecords = [
                 ['kode' => 'IF101', 'nilai' => 88, 'semester' => 1],
                 ['kode' => 'IF102', 'nilai' => 82, 'semester' => 1],
+
                 ['kode' => 'IF201', 'nilai' => 85, 'semester' => 2],
                 ['kode' => 'IF202', 'nilai' => 78, 'semester' => 2],
+
+                ['kode' => 'IF301', 'nilai' => 90, 'semester' => 3],
+                ['kode' => 'IF302', 'nilai' => 75, 'semester' => 3],
+                ['kode' => 'IF303', 'nilai' => 86, 'semester' => 3],
+
+                ['kode' => 'IF401', 'nilai' => 92, 'semester' => 4],
+                ['kode' => 'IF402', 'nilai' => 84, 'semester' => 4],
+
+                ['kode' => 'IF403', 'nilai' => 80, 'semester' => 5],
+                ['kode' => 'IF404', 'nilai' => 87, 'semester' => 5],
+
+                ['kode' => 'IF502', 'nilai' => 83, 'semester' => 6],
             ];
 
-            if ($user->semester_aktif >= 3) {
-                $nilaiRecords[] = ['kode' => 'IF301', 'nilai' => 90, 'semester' => 3];
-                $nilaiRecords[] = ['kode' => 'IF302', 'nilai' => 75, 'semester' => 3];
-                $nilaiRecords[] = ['kode' => 'IF303', 'nilai' => 86, 'semester' => 3];
-            }
-
-            if ($user->semester_aktif >= 4) {
-                $nilaiRecords[] = ['kode' => 'IF401', 'nilai' => 92, 'semester' => 4];
-            }
-
             foreach ($nilaiRecords as $n) {
-                $mk = MataKuliah::where('kode_mk', $n['kode'])->first();
-                if ($n['semester'] <= $user->semester_aktif) {
-                    NilaiMahasiswa::create([
-                        'user_id' => $user->id,
-                        'mata_kuliah_id' => $mk->id,
-                        'nilai_angka' => $n['nilai'],
-                        'grade' => NilaiMahasiswa::hitungGrade($n['nilai']),
-                        'semester_lulus' => $n['semester'],
-                    ]);
+
+                $mk = MataKuliah::where(
+                    'kode_mk',
+                    $n['kode']
+                )->first();
+
+                if (!$mk) {
+                    continue;
                 }
+
+                NilaiMahasiswa::create([
+                    'user_id' => $user->id,
+                    'mata_kuliah_id' => $mk->id,
+                    'nilai_angka' => $n['nilai'],
+                    'grade' => NilaiMahasiswa::hitungGrade($n['nilai']),
+                    'semester_lulus' => $n['semester'],
+                ]);
             }
 
-            $service->rekomendasikan($user->fresh(['minat', 'nilaiMahasiswa.mataKuliah']));
+            $service->rekomendasikan(
+                $user->fresh([
+                    'minat',
+                    'nilaiMahasiswa.mataKuliah'
+                ])
+            );
         }
     }
 }
