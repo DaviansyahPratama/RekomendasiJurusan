@@ -13,7 +13,7 @@ class RiwayatNilaiController extends Controller
             ->nilaiMahasiswa()
             ->with('mataKuliah')
             ->orderBy('semester_lulus')
-            ->get();
+            ->paginate(10);
 
         return view('mahasiswa.riwayat-nilai', compact('nilai'));
     }

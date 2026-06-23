@@ -44,14 +44,17 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($rekomendasi as $item)
+                @forelse($rekomendasi as $item)
                 @php $mk = $item['mata_kuliah']; @endphp
                 <tr>
                     <td>{{ $mk->kode_mk }} - {{ $mk->nama_mk }}</td>
                     <td>{{ $mk->sks }}</td>
                     <td>{{ $mk->kategori }}</td>
                     <td>{{ $mk->tingkat_kesulitan }}</td>
-                    <td><strong>{{ number_format($item['skor'], 1) }}</strong></td>
+                    <td>
+                        <strong>{{ number_format($item['skor'], 1) }}</strong>
+                        @include('mahasiswa._komponen-skor')
+                    </td>
                     <td>
                         @if($item['direkomendasikan'])
                             <span class="badge bg-success">Direkomendasikan</span>
@@ -60,9 +63,12 @@
                         @endif
                     </td>
                 </tr>
-                @endforeach
+                @empty
+                <tr><td colspan="6" class="text-center text-muted py-4">Belum ada data rekomendasi</td></tr>
+                @endforelse
             </tbody>
         </table>
     </div>
+    @if($rekomendasi->hasPages())<div class="card-footer">{{ $rekomendasi->links() }}</div>@endif
 </div>
 @endsection

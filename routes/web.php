@@ -13,7 +13,6 @@ use App\Http\Controllers\Mahasiswa\MinatController as MahasiswaMinatController;
 use App\Http\Controllers\Mahasiswa\ProfilController;
 use App\Http\Controllers\Mahasiswa\RekomendasiController;
 use App\Http\Controllers\Mahasiswa\RiwayatNilaiController;
-use App\Http\Controllers\Mahasiswa\SimulasiController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -52,8 +51,5 @@ Route::middleware(['auth', 'mahasiswa'])->prefix('mahasiswa')->name('mahasiswa.'
     Route::get('/pilih-minat', [MahasiswaMinatController::class, 'index'])->name('pilih-minat');
     Route::post('/pilih-minat', [MahasiswaMinatController::class, 'store'])->name('pilih-minat.store');
     Route::get('/rekomendasi', [RekomendasiController::class, 'index'])->name('rekomendasi');
-    Route::get('/simulasi', [SimulasiController::class, 'index'])->name('simulasi');
-    Route::post('/simulasi', [SimulasiController::class, 'store'])->name('simulasi.store');
-    Route::delete('/simulasi/{pengambilan}', [SimulasiController::class, 'destroy'])->name('simulasi.destroy');
     Route::get('/grafik', [GrafikController::class, 'index'])->name('grafik');
 });

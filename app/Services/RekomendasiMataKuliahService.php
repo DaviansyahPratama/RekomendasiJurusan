@@ -3,82 +3,82 @@
 namespace App\Services;
 
 use App\Models\MataKuliah;
-use App\Models\NilaiMahasiswa;
 use App\Models\RekomendasiMataKuliah;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
 class RekomendasiMataKuliahService
 {
-    public function rekomendasikan(User $user, int $totalSksSimulasi = 0): Collection
+    public function __construct(
+        private RelasiDiskritService $relasiDiskrit
+    ) {}
+
+    public function rekomendasikan(User $user): Collection
     {
-        $user->load(['minat', 'nilaiMahasiswa.mataKuliah', 'pengambilanMataKuliah']);
+        $user->load(['minat', 'nilaiMahasiswa.mataKuliah']);
 
         $semesterAktif = $user->semester_aktif ?? 1;
         $mataKuliahDiambil = $user->nilaiMahasiswa->pluck('mata_kuliah_id')->toArray();
         $nilaiMap = $user->nilaiMahasiswa->keyBy('mata_kuliah_id');
         $minatMahasiswa = $user->minat->pluck('nama_minat')->toArray();
+        $nilaiSem1s7 = $this->relasiDiskrit->nilaiSemesterSatuSampaiTujuh($user->nilaiMahasiswa);
 
         $semesterBerikutnya = $semesterAktif + 1;
-        $totalSks = $totalSksSimulasi > 0
-            ? $totalSksSimulasi
-            : (int) $user->pengambilanMataKuliah()
-                ->where('semester_ambil', $semesterBerikutnya)
-                ->join('mata_kuliah', 'pengambilan_mata_kuliah.mata_kuliah_id', '=', 'mata_kuliah.id')
-                ->sum('mata_kuliah.sks');
 
+        // MK semester berikutnya + MK semester ≤ aktif yang belum diambil
         $semuaMataKuliah = MataKuliah::with('prasyarat')
-            ->where('semester', $semesterBerikutnya)
+            ->where('semester', '<=', $semesterBerikutnya)
             ->get();
+
         $hasil = collect();
 
         foreach ($semuaMataKuliah as $mk) {
             $eligible = $this->isEligible($mk, $semesterAktif, $mataKuliahDiambil, $nilaiMap);
-            $eligible = $this->isEligible(
-                $mk,
-                $semesterAktif,
-                $mataKuliahDiambil,
-                $nilaiMap
-            );
 
-            if (! $eligible) {
-                $skor = 0;
-            } else {
-                $skor = $this->hitungSkor(
-                    $mk,
-                    $minatMahasiswa,
-                    $user,
-                    $totalSks,
-                    $nilaiMap
-                );
-            }
+            $komponen = $eligible
+                ? $this->relasiDiskrit->hitungSkorRelasi($mk, $minatMahasiswa, $nilaiSem1s7)
+                : [
+                    'skor' => 0,
+                    'skor_minat' => 0,
+                    'skor_nilai' => 0,
+                    'relasi_minat' => false,
+                    'jumlah_nilai_kategori' => 0,
+                    'grade_terbaik' => null,
+                ];
 
             $hasil->push([
                 'mata_kuliah' => $mk,
-                'skor' => $skor,
+                'skor' => $komponen['skor'],
+                'komponen' => $komponen,
                 'direkomendasikan' => $eligible,
                 'alasan_tidak' => $eligible ? null : $this->alasanTidakEligible($mk, $semesterAktif, $mataKuliahDiambil, $nilaiMap),
             ]);
 
             RekomendasiMataKuliah::updateOrCreate(
                 ['user_id' => $user->id, 'mata_kuliah_id' => $mk->id],
-                ['skor' => $skor, 'direkomendasikan' => $eligible]
+                [
+                    'skor' => $komponen['skor'],
+                    'skor_minat' => $komponen['skor_minat'],
+                    'skor_nilai' => $komponen['skor_nilai'],
+                    'direkomendasikan' => $eligible,
+                ]
             );
         }
 
         return $hasil->sortByDesc('skor')->values();
     }
 
-    public function rekomendasiFiltered(User $user, int $totalSksSimulasi = 0): Collection
+    public function rekomendasiFiltered(User $user): Collection
     {
-        return $this->rekomendasikan($user, $totalSksSimulasi)
+        return $this->rekomendasikan($user)
             ->where('direkomendasikan', true)
             ->values();
     }
 
     private function isEligible(MataKuliah $mk, int $semesterAktif, array $diambil, Collection $nilaiMap): bool
     {
-        if ($mk->semester > ($semesterAktif + 1)) {
+        // MK hanya dapat direkomendasikan hingga semester berikutnya (aktif + 1)
+        if ($mk->semester > $semesterAktif + 1) {
             return false;
         }
 
@@ -87,7 +87,7 @@ class RekomendasiMataKuliahService
         }
 
         foreach ($mk->prasyarat as $prasyarat) {
-            $nilai = $nilaiMap->get($prasyarat->mata_kuliah_id);
+            $nilai = $nilaiMap->get($prasyarat->id);
 
             if (! $nilai || ! in_array($nilai->grade, ['A', 'B', 'C'], true)) {
                 return false;
@@ -99,8 +99,8 @@ class RekomendasiMataKuliahService
 
     private function alasanTidakEligible(MataKuliah $mk, int $semesterAktif, array $diambil, Collection $nilaiMap): string
     {
-        if ($mk->semester > ($semesterAktif + 1)) {
-            return 'Belum dapat diambil pada semester berikutnya';
+        if ($mk->semester > $semesterAktif + 1) {
+            return 'Belum dapat diambil (semester mata kuliah melebihi rencana semester berikutnya)';
         }
 
         if (in_array($mk->id, $diambil, true)) {
@@ -108,79 +108,23 @@ class RekomendasiMataKuliahService
         }
 
         foreach ($mk->prasyarat as $prasyarat) {
-            $nilai = $nilaiMap->get($prasyarat->mata_kuliah_id);
+            $nilai = $nilaiMap->get($prasyarat->id);
             if (! $nilai) {
-                return 'Prasyarat belum lulus: ' . $prasyarat->nama_mk;
+                return 'Prasyarat belum lulus: '.$prasyarat->nama_mk;
             }
             if (! in_array($nilai->grade, ['A', 'B', 'C'], true)) {
-                return 'Prasyarat grade minimal C: ' . $prasyarat->nama_mk;
+                return 'Prasyarat grade minimal C: '.$prasyarat->nama_mk;
             }
         }
 
         return 'Tidak memenuhi syarat';
     }
 
-    private function hitungSkor(
-        MataKuliah $mk,
-        array $minatMahasiswa,
-        User $user,
-        int $totalSks,
-        Collection $nilaiMap
-    ): float {
-
-        // 40%
-        $scoreMinat = in_array(
-            $mk->kategori,
-            $minatMahasiswa,
-            true
-        ) ? 40 : 0;
-
-        // 30%
-        $scoreNilai = $this->scoreNilaiKategori(
-            $mk->kategori,
-            $user
-        );
-
-        // 20%
-        $scoreIpk = ($user->ipk / 4.0) * 20;
-
-        // 10%
-        $scoreKesulitan = max(
-            0,
-            10 - (($mk->tingkat_kesulitan - 1) * 2)
-        );
-
-        $total = $scoreMinat
-            + $scoreNilai
-            + $scoreIpk
-            + $scoreKesulitan;
-
-        return round(min(100, $total), 2);
-    }
-
-    private function scoreNilaiKategori(string $kategori, User $user): float
-    {
-        $nilaiKategori = $user->nilaiMahasiswa
-            ->filter(
-                fn($n) =>
-                $n->mataKuliah &&
-                    $n->mataKuliah->kategori === $kategori
-            );
-
-        if ($nilaiKategori->isEmpty()) {
-            return 0;
-        }
-
-        $rataBobot = $nilaiKategori->avg(
-            fn($n) => NilaiMahasiswa::bobotGrade($n->grade)
-        );
-
-        return round(($rataBobot / 4) * 30, 2);
-    }
-
     public function riwayatIpPerSemester(User $user): array
     {
-        $nilai = $user->nilaiMahasiswa()->with('mataKuliah')->get();
+        $nilai = $this->relasiDiskrit->nilaiSemesterSatuSampaiTujuh(
+            $user->nilaiMahasiswa()->with('mataKuliah')->get()
+        );
 
         $perSemester = $nilai->groupBy('semester_lulus')->sortKeys();
 
@@ -206,7 +150,7 @@ class RekomendasiMataKuliahService
             $akumulasiSks += $totalSks;
             $ipk = $akumulasiSks > 0 ? round($akumulasiBobot / $akumulasiSks, 2) : 0;
 
-            $labels[] = 'Semester ' . $semester;
+            $labels[] = 'Semester '.$semester;
             $ipData[] = $ip;
             $ipkData[] = $ipk;
         }
@@ -218,7 +162,7 @@ class RekomendasiMataKuliahService
     {
         $direkomendasikan = $rekomendasi->where('direkomendasikan', true);
 
-        $grouped = $direkomendasikan->groupBy(fn($r) => $r['mata_kuliah']->kategori);
+        $grouped = $direkomendasikan->groupBy(fn ($r) => $r['mata_kuliah']->kategori);
 
         return [
             'labels' => $grouped->keys()->values()->toArray(),

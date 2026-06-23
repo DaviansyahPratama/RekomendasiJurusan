@@ -11,8 +11,11 @@ class RekomendasiController extends Controller
     public function index(RekomendasiMataKuliahService $service): View
     {
         $user = auth()->user()->load(['minat', 'nilaiMahasiswa']);
-        $rekomendasi = $service->rekomendasikan($user);
+        $rekomendasiAll = $service->rekomendasikan($user);
 
-        return view('mahasiswa.rekomendasi', compact('rekomendasi', 'user'));
+        return view('mahasiswa.rekomendasi', [
+            'rekomendasi' => $this->paginateCollection($rekomendasiAll),
+            'user' => $user,
+        ]);
     }
 }

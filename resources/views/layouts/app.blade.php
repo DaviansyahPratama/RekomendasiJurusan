@@ -47,7 +47,6 @@
                         ['route' => 'mahasiswa.riwayat-nilai', 'label' => 'Riwayat Nilai', 'icon' => 'journal-text'],
                         ['route' => 'mahasiswa.pilih-minat', 'label' => 'Pilih Minat', 'icon' => 'heart'],
                         ['route' => 'mahasiswa.rekomendasi', 'label' => 'Rekomendasi', 'icon' => 'stars'],
-                        ['route' => 'mahasiswa.simulasi', 'label' => 'Simulasi MK', 'icon' => 'calculator'],
                         ['route' => 'mahasiswa.grafik', 'label' => 'Grafik', 'icon' => 'bar-chart'],
                     ] as $item)
                         <li class="nav-item">

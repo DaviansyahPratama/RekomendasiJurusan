@@ -13,6 +13,8 @@ class RekomendasiMataKuliah extends Model
         'user_id',
         'mata_kuliah_id',
         'skor',
+        'skor_minat',
+        'skor_nilai',
         'direkomendasikan',
     ];
 

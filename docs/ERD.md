@@ -109,29 +109,47 @@ Admin login
 Mahasiswa login → Pilih Minat → Simpan ke pivot minat_mahasiswa
 ```
 
-### 4. Algoritma Rekomendasi (`RekomendasiMataKuliahService`)
+### 4. Algoritma Rekomendasi (`RelasiDiskritService` + `RekomendasiMataKuliahService`)
+
+**Himpunan (Matematika Diskrit):**
+- `M` = minat mahasiswa
+- `K` = kategori mata kuliah
+- `S` = {1, 2, ..., 7} semester
+- `N` = nilai mahasiswa pada semester 1–7
+
+**Relasi:**
+- `R_minat ⊆ M × K` — `(m, k) ∈ R_minat` ⟺ minat `m` = kategori `k` → **+40 poin**
+- `R_nilai ⊆ S × K` — `(s, k) ∈ R_nilai` ⟺ mahasiswa punya nilai kategori `k` di semester `s`
+  → grade terbaik: A **+30**, B **+20**, C **+10**
+- `R_prasyarat ⊆ MK × MK` — dari tabel `prasyarat` (filter eligibility)
+
+**Rumus skor:**
+```
+skor = skor_minat + skor_nilai − penalty_kesulitan − penalty_sks
+```
+
+| Komponen | Sumber Relasi | Nilai |
+|----------|---------------|-------|
+| skor_minat | R_minat | +40 jika ∈ relasi |
+| skor_nilai | R_nilai (sem 1–7) | +30/20/10 |
+| penalty_kesulitan | atribut MK | tingkat × 5 |
+| penalty_sks | simulasi | −20 jika SKS > 24 |
 
 ```
-INPUT: User (semester_aktif, minat, nilai, pengambilan simulasi)
+INPUT: User (semester_aktif, minat, nilai sem 1-7, pengambilan simulasi)
 
-1. Ambil semua mata kuliah
+1. Ambil mata kuliah dengan semester <= semester_aktif
 
 2. FILTER (eligible):
    - semester_mk <= semester_aktif mahasiswa
    - belum pernah diambil (tidak ada di nilai_mahasiswa)
-   - semua prasyarat lulus dengan grade minimal C
+   - semua prasyarat ∈ R_prasyarat lulus grade minimal C
 
-3. HITUNG SKOR per mata kuliah:
-   score = score_minat + score_nilai - penalty_kesulitan - penalty_sks
-
-   A. score_minat: +40 jika kategori MK sesuai minat mahasiswa
-   B. score_nilai: +30 (A), +20 (B), +10 (C) dari grade terbaik di kategori yang sama
-   C. penalty_kesulitan: tingkat_kesulitan × 5
-   D. penalty_sks: -20 jika total SKS simulasi > 24
+3. HITUNG SKOR via RelasiDiskritService::hitungSkorRelasi()
 
 4. URUTKAN dari skor tertinggi
 
-5. SIMPAN ke rekomendasi_mata_kuliah
+5. SIMPAN ke rekomendasi_mata_kuliah (skor + komponen)
 
 OUTPUT: Daftar MK dengan skor dan status Direkomendasikan / Tidak Direkomendasikan
 ```

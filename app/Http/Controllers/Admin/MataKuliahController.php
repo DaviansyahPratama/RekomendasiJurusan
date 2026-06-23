@@ -63,12 +63,9 @@ class MataKuliahController extends Controller
     private function kategoriOptions(): array
     {
         return [
-            'Pemrograman',
-            'Jaringan',
-            'Data Science',
-            'Artificial Intelligence',
-            'Cyber Security',
-            'Multimedia',
+            'Rekayasa Perangkat Lunak',
+            'Kecerdasan Buatan dan Data',
+            'Jaringan dan Keamanan Siber',
         ];
     }
 }

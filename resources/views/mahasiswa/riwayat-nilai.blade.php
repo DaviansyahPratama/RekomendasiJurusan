@@ -20,5 +20,6 @@
             @endforelse
         </tbody>
     </table>
+    @if($nilai->hasPages())<div class="card-footer">{{ $nilai->links() }}</div>@endif
 </div>
 @endsection

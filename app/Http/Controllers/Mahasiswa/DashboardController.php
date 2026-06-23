@@ -11,12 +11,12 @@ class DashboardController extends Controller
     public function index(RekomendasiMataKuliahService $service): View
     {
         $user = auth()->user()->load(['nilaiMahasiswa.mataKuliah', 'minat']);
-        $rekomendasi = $service->rekomendasikan($user);
-        $direkomendasikan = $rekomendasi->where('direkomendasikan', true);
+        $rekomendasiAll = $service->rekomendasikan($user);
+        $direkomendasikan = $rekomendasiAll->where('direkomendasikan', true);
 
         return view('mahasiswa.dashboard', [
             'user' => $user,
-            'rekomendasi' => $rekomendasi,
+            'rekomendasi' => $this->paginateCollection($rekomendasiAll),
             'jumlahDirekomendasikan' => $direkomendasikan->count(),
             'totalSksLulus' => $user->totalSksLulus(),
         ]);

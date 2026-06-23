@@ -40,9 +40,14 @@ class MahasiswaController extends Controller
     {
         abort_unless($mahasiswa->isMahasiswa(), 404);
 
-        $mahasiswa->load(['nilaiMahasiswa.mataKuliah', 'minat']);
+        $mahasiswa->load(['minat']);
 
-        return view('admin.mahasiswa.show', compact('mahasiswa'));
+        $nilai = $mahasiswa->nilaiMahasiswa()
+            ->with('mataKuliah')
+            ->orderBy('semester_lulus')
+            ->paginate(10);
+
+        return view('admin.mahasiswa.show', compact('mahasiswa', 'nilai'));
     }
 
     public function edit(User $mahasiswa): View

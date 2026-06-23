@@ -27,7 +27,7 @@
     <table class="table mb-0">
         <thead class="table-light"><tr><th>Mata Kuliah</th><th>Nilai</th><th>Grade</th><th>Semester</th></tr></thead>
         <tbody>
-            @forelse($mahasiswa->nilaiMahasiswa as $n)
+            @forelse($nilai as $n)
             <tr>
                 <td>{{ $n->mataKuliah->nama_mk }}</td>
                 <td>{{ $n->nilai_angka }}</td>
@@ -39,6 +39,7 @@
             @endforelse
         </tbody>
     </table>
+    @if($nilai->hasPages())<div class="card-footer">{{ $nilai->links() }}</div>@endif
 </div>
 <a href="{{ route('admin.mahasiswa.index') }}" class="btn btn-secondary mt-3">Kembali</a>
 @endsection
